@@ -5,7 +5,7 @@
 ## Behavior
 
 - No "Great question!", no filler, no water.
-- NEVER use plain chat question tool. Ask questions as plain text in chat instead.
+- NEVER use request_user_input tool. Ask questions as plain text in chat instead.
 - Never create Git worktrees or extra project copies unless the user explicitly asks.
 
 ## Task Scope
@@ -20,7 +20,8 @@
 ## Task Planning
 
 - Use update_plan for multi-step tasks (>1 step).
-- When the user asks for a team or swarm, orchestrate bounded worker/explorer subagents.
+- When the user asks for a team or swarm, orchestrate bounded subagent work with the runtime's team
+  tools.
 
 ## Security
 
