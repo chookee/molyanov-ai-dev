@@ -94,19 +94,18 @@ jobs:
           fi
           : "${AWS_ACCESS_KEY_ID:?missing storage key}" "${AWS_SECRET_ACCESS_KEY:?missing storage secret}" "${S3_BUCKET:?missing bucket}"
           key="$PACK/$VERSION/$PACK-$VERSION.zip"
-          if head=$(aws s3api head-object --endpoint-url "$S3_ENDPOINT" --bucket "$S3_BUCKET" --key "$key" 2>/dev/null); then
-            # Published versions are immutable: reuse the stored object and its recorded hash.
-            size=$(printf '%s' "$head" | jq -r '.ContentLength')
-            sha=$(printf '%s' "$head" | jq -r '.Metadata.sha256 // empty')
-            [ -n "$sha" ] || { echo "::error::Stored $key has no sha256 metadata"; exit 1; }
+          archive="$RUNNER_TEMP/$PACK-$VERSION.zip"
+          if aws s3api head-object --endpoint-url "$S3_ENDPOINT" --bucket "$S3_BUCKET" --key "$key" >/dev/null 2>&1; then
+            # Published versions are immutable: hash the stored object instead of re-uploading
+            # (Beget S3 does not return custom object metadata).
+            aws s3 cp "s3://$S3_BUCKET/$key" "$archive" --endpoint-url "$S3_ENDPOINT" --only-show-errors
           else
-            archive="$RUNNER_TEMP/$PACK-$VERSION.zip"
             git archive --format=zip --prefix="$PACK/" -o "$archive" HEAD
-            size=$(stat -c %s "$archive")
-            sha=$(sha256sum "$archive" | cut -d' ' -f1)
             aws s3 cp "$archive" "s3://$S3_BUCKET/$key" --endpoint-url "$S3_ENDPOINT" \
-              --content-type application/zip --metadata "sha256=$sha" --only-show-errors
+              --content-type application/zip --only-show-errors
           fi
+          size=$(stat -c %s "$archive")
+          sha=$(sha256sum "$archive" | cut -d' ' -f1)
           echo "key=$key" >> "$GITHUB_OUTPUT"
           echo "size=$size" >> "$GITHUB_OUTPUT"
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
